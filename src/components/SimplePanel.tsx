@@ -1,7 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PanelProps, FieldType } from '@grafana/data';
 import { SimpleOptions } from '../types';
+
+import {
+  median,
+  standardDeviation,
+  gradeDistribution,
+  topStudents,
+  bottomStudents,
+  simulatePassRate,
+  clusterStudents,
+} from '../performanceAnalysis';
 
 interface Props extends PanelProps<SimpleOptions> {}
 
@@ -17,6 +27,10 @@ export const SimplePanel: React.FC<Props> = ({
   width,
   height,
 }) => {
+  const [simulationGrade, setSimulationGrade] = useState<number | null>(
+    null
+  );
+
   const passingGrade = Math.min(
     100,
     Math.max(0, options.passingGrade ?? 60)
@@ -29,7 +43,7 @@ export const SimplePanel: React.FC<Props> = ({
 
   const students: Student[] = [];
 
-  // Read numeric values from Grafana query results.
+  // Read student data from Grafana DataFrames.
   data.series.forEach((frame, frameIndex) => {
     const gradeField =
       frame.fields.find(
@@ -52,11 +66,13 @@ export const SimplePanel: React.FC<Props> = ({
     }
 
     gradeField.values.forEach((value, rowIndex) => {
+      if (value === null || value === undefined || value === '') {
+        return;
+      }
+
       const grade = Number(value);
 
       if (
-        value === null ||
-        value === undefined ||
         !Number.isFinite(grade) ||
         grade < 0 ||
         grade > 100
@@ -79,12 +95,14 @@ export const SimplePanel: React.FC<Props> = ({
     });
   });
 
-  // Calculate performance statistics.
+  // Basic statistics
   const totalStudents = students.length;
+
+  const grades = students.map((student) => student.grade);
 
   const averageGrade =
     totalStudents > 0
-      ? students.reduce((sum, student) => sum + student.grade, 0) /
+      ? grades.reduce((sum, grade) => sum + grade, 0) /
         totalStudents
       : 0;
 
@@ -99,7 +117,6 @@ export const SimplePanel: React.FC<Props> = ({
       ? (passedStudents / totalStudents) * 100
       : 0;
 
-  // Apply result filter.
   const filteredStudents = students.filter((student) => {
     if (resultFilter === 'passed') {
       return student.grade >= passingGrade;
@@ -112,6 +129,36 @@ export const SimplePanel: React.FC<Props> = ({
     return true;
   });
 
+  // Advanced statistics
+  const medianGrade = median(grades);
+  const gradeStdDev = standardDeviation(grades);
+
+  const distribution = gradeDistribution(grades);
+
+  const gradeRecords = students.map((student) => ({
+    name: student.name,
+    grade: student.grade,
+  }));
+
+  const topThree = topStudents(gradeRecords);
+  const bottomThree = bottomStudents(gradeRecords);
+
+  // AI: one-dimensional K-means clustering
+  const clusters = clusterStudents(gradeRecords);
+
+  // What-if simulator
+  const selectedSimulationGrade =
+    simulationGrade ?? passingGrade;
+
+  const simulatedPassRate = simulatePassRate(
+    grades,
+    selectedSimulationGrade
+  );
+
+  const simulationDifference =
+    simulatedPassRate - passRate;
+
+  // Responsive design
   const compact = width < 420;
 
   const cardStyle: React.CSSProperties = {
@@ -123,16 +170,27 @@ export const SimplePanel: React.FC<Props> = ({
     minWidth: 0,
   };
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: compact ? 17 : 21,
+  const sectionStyle: React.CSSProperties = {
+    border: '1px solid rgba(128,128,128,0.2)',
+    borderRadius: 12,
+    padding: 14,
+  };
+
+  const sectionTitleStyle: React.CSSProperties = {
+    fontSize: 15,
     fontWeight: 700,
-    marginBottom: 6,
+    marginBottom: 14,
   };
 
   const subtitleStyle: React.CSSProperties = {
     fontSize: 12,
     opacity: 0.7,
   };
+
+  const maxDistribution = Math.max(
+    1,
+    ...distribution.map((item) => item.count)
+  );
 
   return (
     <div
@@ -150,16 +208,22 @@ export const SimplePanel: React.FC<Props> = ({
     >
       {/* Header */}
       <div>
-        <div style={titleStyle}>
+        <div
+          style={{
+            fontSize: compact ? 18 : 22,
+            fontWeight: 700,
+            marginBottom: 6,
+          }}
+        >
           {options.text || 'Student Performance Monitor'}
         </div>
 
         <div style={subtitleStyle}>
-          Academic performance overview
+          Academic Performance Dashboard
         </div>
       </div>
 
-      {/* Statistics */}
+      {/* Main statistics */}
       <div
         style={{
           display: 'flex',
@@ -184,7 +248,7 @@ export const SimplePanel: React.FC<Props> = ({
                 color: chartColor,
               }}
             >
-              {totalStudents > 0
+              {totalStudents
                 ? averageGrade.toFixed(1)
                 : '—'}
             </div>
@@ -201,7 +265,7 @@ export const SimplePanel: React.FC<Props> = ({
                 color: '#32A879',
               }}
             >
-              {totalStudents > 0
+              {totalStudents
                 ? `${passRate.toFixed(1)}%`
                 : '—'}
             </div>
@@ -209,12 +273,12 @@ export const SimplePanel: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Summary */}
+      {/* Pass/fail summary */}
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 12,
+          gap: 14,
           fontSize: 13,
         }}
       >
@@ -223,7 +287,6 @@ export const SimplePanel: React.FC<Props> = ({
         <span>Failed: {failedStudents}</span>
       </div>
 
-      {/* Series counter */}
       {options.showSeriesCount && (
         <div
           data-testid="simple-panel-series-counter"
@@ -241,31 +304,18 @@ export const SimplePanel: React.FC<Props> = ({
       )}
 
       {/* Student grade chart */}
-      <div
-        style={{
-          border: '1px solid rgba(128,128,128,0.2)',
-          borderRadius: 12,
-          padding: 14,
-          flex: '1 0 auto',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            marginBottom: 14,
-          }}
-        >
-          Student Grade Distribution
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          Student Grades
         </div>
 
         {totalStudents === 0 ? (
-          <div style={{ opacity: 0.7, padding: 16 }}>
-            No valid grades found. Configure a Grafana
-            query returning numeric grades from 0 to 100.
+          <div style={{ opacity: 0.7 }}>
+            No valid grade data found. Provide numeric
+            student grades between 0 and 100.
           </div>
         ) : filteredStudents.length === 0 ? (
-          <div style={{ opacity: 0.7, padding: 16 }}>
+          <div style={{ opacity: 0.7 }}>
             No students match the selected filter.
           </div>
         ) : (
@@ -277,7 +327,7 @@ export const SimplePanel: React.FC<Props> = ({
               return (
                 <div
                   key={student.id}
-                  title={`${student.name}: ${student.grade} — ${
+                  title={`${student.name}: ${student.grade} - ${
                     passed ? 'Passed' : 'Failed'
                   }`}
                   style={{
@@ -322,9 +372,9 @@ export const SimplePanel: React.FC<Props> = ({
 
                   <div
                     style={{
-                      width: 42,
-                      textAlign: 'right',
+                      width: 43,
                       fontWeight: 600,
+                      textAlign: 'right',
                       fontSize: 12,
                     }}
                   >
@@ -334,8 +384,8 @@ export const SimplePanel: React.FC<Props> = ({
                   <span
                     style={{
                       fontSize: 11,
+                      minWidth: 42,
                       color: passed ? '#32A879' : '#E58A55',
-                      minWidth: 44,
                     }}
                   >
                     {passed ? 'Passed' : 'Failed'}
@@ -347,11 +397,364 @@ export const SimplePanel: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Footer - mandatory student name */}
+      {/* Advanced statistical analysis */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          Advanced Statistics
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+          }}
+        >
+          <div style={cardStyle}>
+            <div style={subtitleStyle}>Median Grade</div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>
+              {totalStudents
+                ? medianGrade.toFixed(1)
+                : '—'}
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={subtitleStyle}>
+              Standard Deviation
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>
+              {totalStudents
+                ? gradeStdDev.toFixed(2)
+                : '—'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Grade distribution */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          Grade Distribution
+        </div>
+
+        {distribution.map((item) => (
+          <div
+            key={item.label}
+            style={{ marginBottom: 12 }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 12,
+                marginBottom: 5,
+              }}
+            >
+              <span>{item.label}</span>
+              <span>{item.count} students</span>
+            </div>
+
+            <div
+              style={{
+                height: 15,
+                background: 'rgba(128,128,128,0.15)',
+                borderRadius: 8,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${
+                    (item.count / maxDistribution) * 100
+                  }%`,
+                  height: '100%',
+                  background: chartColor,
+                  borderRadius: 8,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Rankings */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          Top & Bottom Students
+        </div>
+
+        {totalStudents === 0 ? (
+          <div style={subtitleStyle}>
+            No student data available.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: compact
+                ? '1fr'
+                : 'repeat(2, minmax(0, 1fr))',
+              gap: 16,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  color: '#32A879',
+                  fontWeight: 700,
+                  marginBottom: 8,
+                }}
+              >
+                Highest Grades
+              </div>
+
+              {topThree.map((student, index) => (
+                <div
+                  key={`${student.name}-${index}`}
+                  style={{ fontSize: 12, marginBottom: 7 }}
+                >
+                  {index + 1}. {student.name} — {student.grade}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div
+                style={{
+                  color: '#E58A55',
+                  fontWeight: 700,
+                  marginBottom: 8,
+                }}
+              >
+                Lowest Grades
+              </div>
+
+              {bottomThree.map((student, index) => (
+                <div
+                  key={`${student.name}-${index}`}
+                  style={{ fontSize: 12, marginBottom: 7 }}
+                >
+                  {index + 1}. {student.name} — {student.grade}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* AI K-means clustering */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          AI Performance Insights
+        </div>
+
+        <div style={{ ...subtitleStyle, marginBottom: 14 }}>
+          K-means clustering groups students with
+          similar grades. This is an unsupervised
+          machine learning method.
+        </div>
+
+        {clusters.length === 0 ? (
+          <div style={subtitleStyle}>
+            No data available for clustering.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gap: 10,
+            }}
+          >
+            {clusters.map((cluster, index) => (
+              <div
+                key={index}
+                style={{
+                  background: 'rgba(139,92,246,0.07)',
+                  borderRadius: 10,
+                  padding: 12,
+                  border:
+                    '1px solid rgba(139,92,246,0.15)',
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 6,
+                  }}
+                >
+                  {cluster.label}
+                </div>
+
+                <div style={{ fontSize: 12 }}>
+                  Students: {cluster.students.length}
+                </div>
+
+                <div style={{ fontSize: 12 }}>
+                  Group Average: {cluster.center.toFixed(1)}
+                </div>
+
+                <div
+                  style={{
+                    ...subtitleStyle,
+                    marginTop: 8,
+                  }}
+                >
+                  Members: {cluster.students
+                    .map((student) => student.name)
+                    .join(', ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {totalStudents > 0 && (
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 12,
+              lineHeight: 1.7,
+              opacity: 0.85,
+            }}
+          >
+            <strong>Explainable Insight:</strong>
+            {' '}
+            The algorithm groups similar grades
+            based on their distance from the
+            calculated cluster centers.
+
+            <div style={{ marginTop: 7 }}>
+              Lower-grade groups may benefit from
+              additional revision and academic support.
+              Higher-grade groups may be suitable for
+              enrichment activities.
+            </div>
+
+            <div style={{ marginTop: 7, opacity: 0.75 }}>
+              These groups describe current grades only.
+              They do not predict future performance
+              or diagnose individual learning needs.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* What-if simulator */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>
+          What-If Simulator
+        </div>
+
+        <div style={{ ...subtitleStyle, marginBottom: 14 }}>
+          Explore how changing the passing grade
+          affects the class pass rate.
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 13,
+            marginBottom: 10,
+          }}
+        >
+          <span>Simulated Passing Grade</span>
+          <strong>{selectedSimulationGrade}</strong>
+        </div>
+
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={selectedSimulationGrade}
+          onChange={(event) =>
+            setSimulationGrade(
+              Number(event.currentTarget.value)
+            )
+          }
+          style={{
+            width: '100%',
+            accentColor: chartColor,
+            cursor: 'pointer',
+          }}
+          aria-label="Simulated passing grade"
+        />
+
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            marginTop: 14,
+          }}
+        >
+          <div style={cardStyle}>
+            <div style={subtitleStyle}>
+              Current Pass Rate
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>
+              {totalStudents ? `${passRate.toFixed(1)}%` : '—'}
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={subtitleStyle}>
+              Simulated Pass Rate
+            </div>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: chartColor,
+              }}
+            >
+              {totalStudents
+                ? `${simulatedPassRate.toFixed(1)}%`
+                : '—'}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+        >
+          {totalStudents === 0
+            ? 'No data available for simulation.'
+            : simulationDifference > 0
+            ? `Pass rate increases by ${simulationDifference.toFixed(1)} percentage points.`
+            : simulationDifference < 0
+            ? `Pass rate decreases by ${Math.abs(simulationDifference).toFixed(1)} percentage points.`
+            : 'The pass rate stays unchanged.'}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSimulationGrade(null)}
+          style={{
+            marginTop: 12,
+            padding: '7px 12px',
+            border: '1px solid rgba(128,128,128,0.4)',
+            borderRadius: 7,
+            background: 'transparent',
+            color: 'inherit',
+            cursor: 'pointer',
+          }}
+        >
+          Reset Simulation
+        </button>
+      </div>
+
+      {/* Developer footer */}
       <div
         style={{
           textAlign: 'center',
-          paddingTop: 10,
+          padding: 12,
           borderTop: '1px solid rgba(128,128,128,0.2)',
           fontSize: 12,
           fontWeight: 700,
