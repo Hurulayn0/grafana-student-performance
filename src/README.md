@@ -1,53 +1,105 @@
-<!-- This README file is going to be the one displayed on the Grafana.com website for your plugin. Uncomment and replace the content here before publishing.
+# Student Performance Monitoring Panel
 
-Remove any remaining comments before publishing as these may be displayed on Grafana.com -->
+**Course:** SEN0415 Advanced Web Programming  
+**University:** Istanbul Kültür University  
+**Developer:** Huriye Kayadelen  
+**Project Type:** Grafana Panel Plugin
 
-# Student-Performance
+## Project Description
 
-<!-- To help maximize the impact of your README and improve usability for users, we propose the following loose structure:
+This project is a custom Grafana panel developed using React and TypeScript. It helps teachers analyze student grades and understand overall class performance.
 
-**BEFORE YOU BEGIN**
-- Ensure all links are absolute URLs so that they will work when the README is displayed within Grafana and Grafana.com
-- Write for the people using your plugin, not for developers working on it. Development and contribution instructions belong in a separate CONTRIBUTING.md file
-- Be inspired ✨
-  - [grafana-polystat-panel](https://github.com/grafana/grafana-polystat-panel)
-  - [volkovlabs-variable-panel](https://github.com/volkovlabs/volkovlabs-variable-panel)
+The plugin uses data from Grafana queries and displays interactive charts, statistics, and machine learning insights.
 
-**ADD SOME BADGES**
+## Main Features
 
-Badges convey useful information at a glance for users whether in the Catalog or viewing the source code. You can use the generator on [Shields.io](https://shields.io/badges/dynamic-json-badge) together with the Grafana.com API
-to create dynamic badges that update automatically when you publish a new version to the marketplace.
+- Student grades and performance visualization
+- Average grade and passing rate calculation
+- Adjustable passing grade
+- Passed, failed, and all-students filters
+- Customizable chart colors
+- Median and standard deviation
+- Grade distribution charts
+- Top and bottom student rankings
+- Responsive dashboard design
+- Interactive What-If Simulator
 
-- For the URL parameter use `https://grafana.com/api/plugins/your-plugin-id`.
-- Example queries:
-  - Downloads: `$.downloads`
-  - Catalog Version: `$.version`
-  - Grafana Dependency: `$.grafanaDependency`
-  - Signature Type: `$.versionSignatureType`
-- Optionally, for the logo parameter use `grafana`.
+## AI Feature
 
-Full example: ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?logo=grafana&query=$.version&url=https://grafana.com/api/plugins/grafana-polystat-panel&label=Marketplace&prefix=v&color=F47A20)
+The project uses K-means clustering, an unsupervised machine learning algorithm, to group students with similar grades.
 
-Consider other [badges](https://shields.io/badges) as you feel appropriate for your project.
+The panel displays group averages, student counts, and explanations of the clustering results.
 
-## Overview / Introduction
-Provide one or more paragraphs as an introduction to your plugin to help users understand why they should use it.
+The model analyzes current grades. It does not predict future academic performance.
 
-Consider including screenshots:
-- in [plugin.json](https://grafana.com/developers/plugin-tools/reference/plugin-json#info) include them as relative links.
-- in the README ensure they are absolute URLs.
+## Technologies
 
-## Requirements
-List any requirements or dependencies they may need to run the plugin.
+- React
+- TypeScript
+- Grafana
+- Docker
+- Ubuntu WSL 2
+- Node.js and npm
+- Jest
+- Git
 
-## Getting Started
-Provide a quick start on how to configure and use the plugin.
+## Installation
 
-## Documentation
-If your project has dedicated documentation available for users, provide links here. For help in following Grafana's style recommendations for technical documentation, refer to our [Writer's Toolkit](https://grafana.com/docs/writers-toolkit/).
+Requirements: Node.js 24.5 or newer, npm, Docker with Compose, and Git.
 
-## Contributing
-Do you want folks to contribute to the plugin or provide feedback through specific means? If so, link to your issue tracker and to a CONTRIBUTING.md file in your repository.
+Open a terminal inside the plugin project folder.
 
-Don't include installation, build, or development setup instructions in this README. Put them in CONTRIBUTING.md instead. Plugin submissions whose README contains these instructions are rejected.
--->
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development build:
+
+```bash
+npm run dev
+```
+
+In another terminal, start Grafana:
+
+```bash
+docker compose up
+```
+
+Open Grafana at http://localhost:3000 and select the Student-Performance visualization.
+
+Configure a Grafana query that returns student names and numeric grades between 0 and 100. TestData DB with CSV Content can be used for demonstration.
+
+## Testing
+
+Run:
+
+```bash
+npm run typecheck
+npm run test:ci
+npm run build
+```
+
+The project includes automated tests for grade calculations, statistics, simulation, and K-means clustering.
+
+## Bonus Features
+
+The project implements several optional assignment features:
+
+- Grafana data source usage
+- Interactive panel configuration
+- Statistical analysis
+- Responsive design
+- K-means machine learning
+- What-If simulation
+- Automated tests
+- Documentation
+
+## Limitations
+
+The demonstration uses synthetic student data. The clustering algorithm considers grades only and must not be used as a definitive evaluation of students' ability or future performance.
+
+## Developer
+
+**Developed by Huriye Kayadelen**
