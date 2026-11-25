@@ -103,3 +103,14 @@ The demonstration uses synthetic student data. The clustering algorithm consider
 ## Developer
 
 **Developed by Huriye Kayadelen**
+## Run the demonstration
+
+On Windows, enable the WSL 2 engine in Docker Desktop and enable integration for your Ubuntu distribution. Wait for Engine running. In the Ubuntu project directory, use npm ci with the included lockfile, then npm run build. Run docker compose up and open http://localhost:3000. For live development, keep npm run dev running in a second terminal.
+
+Open Student Performance Dashboard. For a fresh instance, import demo/student-performance-dashboard.json as a new dashboard. If the saved data source UID is unavailable, select the local TestData DB for query A. Use CSV Content with Student Name and Grade fields. The dashboard export contains all 15 demonstration rows.
+
+At passing grade 60, check the 15 students, average 70.1 and pass rate 66.7%. Change the result filter to Passed or Failed to explore the grade bars. Restore All students. The What-If Simulator changes a separate threshold. Move it to 80 to compare the simulated 40.0% with the current 66.7%, then reset the simulation.
+
+Clustering uses up to three centers initialized across the sorted distinct grades. Each student joins the nearest center by absolute grade difference. The next center is the group mean. Iteration stops when centers stabilize or after 30 rounds. Equal grades can produce fewer groups. Group labels describe this class and this query only.
+
+The submission ZIP includes five screenshots in screenshots/ and the live recording in video/. For a short demo, show the title and developer credit, student bars and totals, passing grade and filter, cluster membership and explanations, then the simulator. Finish with the original settings and developer credit.

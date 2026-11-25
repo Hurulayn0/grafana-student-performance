@@ -51,3 +51,12 @@ ci/
 package-lock.backup.json
 package-lock.problem.json
 package.backup.json
+
+# Local settings, credentials and temporary files
+.env
+.env.*
+*.pem
+*.key
+*.bak
+*.tmp
+.cache/

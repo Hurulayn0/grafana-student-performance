@@ -1,4 +1,10 @@
-# Grafana panel plugin template
+# Student Performance Monitoring Panel
+
+SEN0415 Advanced Web Programming project by Huriye Kayadelen. This Grafana panel displays student grades, class statistics, K-means groups and a passing-grade simulator.
+
+[Installation, features, limitations and demo guide](src/README.md) · [Exported demo dashboard](demo/student-performance-dashboard.json)
+
+## Grafana scaffold reference
 
 This template is a starting point for building a panel plugin for Grafana.
 
